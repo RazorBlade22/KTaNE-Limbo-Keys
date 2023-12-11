@@ -72,9 +72,9 @@ public class LimboKeysScript : MonoBehaviour
         //SwapPos %= StandardSwaps.Count();
     }
 
-    private IEnumerator Intro(float focusFadeInDur = 0.15f, float focusFlashDur = 0.6f, float keyFadeDur = 0.6f, 
-        float intervalBetweenMvmts = 0.3f, float moveDur = 0.15f, 
-        float greenInOutDur = 0.3f, float greenSustain = 0.9f)      //Intro must last 4.8s
+    private IEnumerator Intro(float focusFadeInDur = 0.6f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f, 
+        float intervalBetweenMvmts = 0.3f, float moveDur = 0.2f, 
+        float greenInOutDur = 0.3f, float greenSustain = 0.5f)      //Intro must last 4.8s
     {
         if (Sound != null)
             Sound.StopSound();
@@ -85,7 +85,7 @@ public class LimboKeysScript : MonoBehaviour
             yield return null;
             timer += Time.deltaTime;
             Focus.color = new Color(1, 1, 1, Easing.OutSine(timer, 0, 1, focusFlashDur));
-            Focus.transform.localScale = Vector3.one * Easing.InExpo(timer, 0.025f, 0.03f, focusFadeInDur);
+            Focus.transform.localScale = Vector3.one * Easing.OutExpo(timer, 0.025f, 0.03f, focusFadeInDur);
         }
         Focus.color = Color.white;
         Focus.transform.localScale = Vector3.one * 0.03f;
