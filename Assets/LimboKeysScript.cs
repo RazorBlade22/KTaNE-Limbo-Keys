@@ -74,7 +74,7 @@ public class LimboKeysScript : MonoBehaviour
 
     private IEnumerator Intro(float focusFadeInDur = 0.6f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f, 
         float intervalBetweenMvmts = 0.3f, float moveDur = 0.2f, 
-        float greenInOutDur = 0.3f, float greenSustain = 0.5f)      //Intro must last 4.8s
+        float greenInOutDur = 0.3f, float greenSustain = 0.4f)      //Intro must last 4.8s
     {
         if (Sound != null)
             Sound.StopSound();
@@ -120,7 +120,7 @@ public class LimboKeysScript : MonoBehaviour
             Keys[i].transform.localPosition = InitKeyPositions[i];
             Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, 0, Keys[i].transform.localEulerAngles.z);
         }
-        var CorrectKey = 0;
+        var CorrectKey = Rnd.Range(0,8);
         timer = 0;
         while (timer < greenInOutDur)
         {
