@@ -34,8 +34,8 @@ public class LimboKeysScript : MonoBehaviour
         new List<int>() { 7, 0, 5, 2, 3, 4, 1, 6 },     //Top half anticlockwise, bottom half anticlockwise
         new List<int>() { 6, 7, 4, 5, 2, 3, 0, 1 },     //Top and bottom X swap
         new List<int>() { 7, 5, 6, 4, 3, 1, 2, 0 },     //Top and bottom keys swap within their rows, middle X swaps
-        new List<int>() { 3, 0, 1, 2, 5, 6, 7, 4 },     //Rows cycle down
-        new List<int>() { 1, 2, 3, 0, 7, 4, 5, 6 },     //Rows cycle up
+        new List<int>() { 4, 0, 1, 2, 5, 6, 7, 3 },     //Rows cycle down, the row moving the most swaps
+        new List<int>() { 1, 2, 3, 7, 0, 4, 5, 6 },     //Rows cycle up, the row moving the most swaps
         new List<int>() { 0, 7, 6, 4, 5, 3, 2, 1 },     //Top-left stays, two diagonal swaps, bottom-right triplet cycles clockwise
         new List<int>() { 6, 5, 3, 4, 2, 1, 0, 7 },     //Top-right stays, two diagonal swaps, bottom-left triplet cycles clockwise
         new List<int>() { 6, 5, 4, 3, 2, 1, 7, 0 },     //Bottom-left stays, two diagonal swaps, top-right triplet cycles clockwise
@@ -49,8 +49,8 @@ public class LimboKeysScript : MonoBehaviour
         for (int i = 0; i < 8; i++)
         {
             InitKeyPositions.Add(Keys[i].transform.localPosition);
-            Keys[i].color = Color.clear;
-            Keys[i].transform.localPosition = Vector3.up * Keys[i].transform.localPosition.y;
+            //Keys[i].color = Color.clear;
+            //Keys[i].transform.localPosition = Vector3.up * Keys[i].transform.localPosition.y;
         }
         Focus.color = Color.clear;
     }
@@ -67,12 +67,13 @@ public class LimboKeysScript : MonoBehaviour
 
     void DisplayPress()
     {
-        StartCoroutine(Intro());
+        //StartCoroutine(Intro());
         //SwapPos += 1;
         //SwapPos %= StandardSwaps.Count();
+        StartCoroutine(TopWithBottomHalf());
     }
 
-    private IEnumerator Intro(float focusFadeInDur = 0.6f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f, 
+    private IEnumerator Intro(float focusFadeInDur = 0.5f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f, 
         float intervalBetweenMvmts = 0.3f, float moveDur = 0.2f, 
         float greenInOutDur = 0.3f, float greenSustain = 0.4f)      //Intro must last 4.8s
     {
@@ -155,6 +156,24 @@ public class LimboKeysScript : MonoBehaviour
             for (int i = 0; i < 8; i++)
                 Keys[i].transform.localPosition = new Vector3(Easing.InOutSine(timer, InitKeyPositions[i].x, InitKeyPositions[newPositions.IndexOf(i)].x, duration), 0,
                     Easing.InOutSine(timer, InitKeyPositions[i].z, InitKeyPositions[newPositions.IndexOf(i)].z, duration));
+        }
+        for (int i = 0; i < 8; i++)
+            Keys[i].transform.localPosition = InitKeyPositions[i];
+    }
+
+    private IEnumerator TopWithBottomHalf(float duration = 0.55f, float movementOut = 0.015f)
+    {
+        float timer = 0;
+        while (timer < duration)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            foreach (var i in new[] { 0, 1, 6, 7 })
+                Keys[i].transform.localPosition = new Vector3(InitKeyPositions[i].x - (Mathf.Sin((timer / duration) * Mathf.PI) * movementOut), 0,
+                    Easing.InOutSine(timer, InitKeyPositions[i].z, InitKeyPositions[i].z - 0.08f, duration));
+            foreach (var i in new[] { 2, 3, 4, 5 })
+                Keys[i].transform.localPosition = new Vector3(InitKeyPositions[i].x + (Mathf.Sin((timer / duration) * Mathf.PI) * movementOut), 0,
+                    Easing.InOutSine(timer, InitKeyPositions[i].z, InitKeyPositions[i].z + 0.08f, duration));
         }
         for (int i = 0; i < 8; i++)
             Keys[i].transform.localPosition = InitKeyPositions[i];
