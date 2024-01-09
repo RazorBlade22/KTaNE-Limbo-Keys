@@ -22,7 +22,7 @@ public class LimboKeysScript : MonoBehaviour
     private List<Vector3> InitKeyPositions = new List<Vector3>();
     private List<int> RotationIDs = new List<int>();
     private int SwapPos;
-    bool temp = true;
+    private bool CannotPress;
 
     private List<List<int>> StandardSwaps = new List<List<int>>()
     {
@@ -78,12 +78,7 @@ public class LimboKeysScript : MonoBehaviour
 
     void DisplayPress()
     {
-        //StartCoroutine(Intro());
-        StartCoroutine(PerformSwap(StandardSwaps[SwapPos]));
-        SwapPos += 1;
-        SwapPos %= StandardSwaps.Count();
-        //StartCoroutine(PerformRevolution(temp));
-        //temp = !temp;
+        StartCoroutine(Intro());
     }
 
     private IEnumerator Intro(float focusFadeInDur = 0.5f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f,
@@ -222,5 +217,10 @@ public class LimboKeysScript : MonoBehaviour
             Keys[i].transform.localPosition = InitKeyPositions[i];
             Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, isClock ? 180 : 0, Keys[i].transform.localEulerAngles.z);
         }
+    }
+
+    private IEnumerator SwapSequence(float in)
+    {
+
     }
 }
