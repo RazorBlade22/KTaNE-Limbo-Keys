@@ -22,6 +22,7 @@ public class LimboKeysScript : MonoBehaviour
     private List<Vector3> InitKeyPositions = new List<Vector3>();
     private List<int> RotationIDs = new List<int>();
     private int SwapPos;
+    bool temp = true;
 
     private List<List<int>> StandardSwaps = new List<List<int>>()
     {
@@ -56,25 +57,28 @@ public class LimboKeysScript : MonoBehaviour
     }
 
     // Use this for initialization
-    void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+    void Start()
+    {
+
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+    }
 
     void DisplayPress()
     {
         //StartCoroutine(Intro());
         //SwapPos += 1;
         //SwapPos %= StandardSwaps.Count();
-        StartCoroutine(TopWithBottomHalf());
+        StartCoroutine(PerformRevolution(temp));
+        temp = !temp;
     }
 
-    private IEnumerator Intro(float focusFadeInDur = 0.5f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f, 
-        float intervalBetweenMvmts = 0.3f, float moveDur = 0.2f, 
+    private IEnumerator Intro(float focusFadeInDur = 0.5f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f,
+        float intervalBetweenMvmts = 0.3f, float moveDur = 0.2f,
         float greenInOutDur = 0.3f, float greenSustain = 0.4f)      //Intro must last 4.8s
     {
         if (Sound != null)
@@ -121,7 +125,7 @@ public class LimboKeysScript : MonoBehaviour
             Keys[i].transform.localPosition = InitKeyPositions[i];
             Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, 0, Keys[i].transform.localEulerAngles.z);
         }
-        var CorrectKey = Rnd.Range(0,8);
+        var CorrectKey = Rnd.Range(0, 8);
         timer = 0;
         while (timer < greenInOutDur)
         {
@@ -169,13 +173,45 @@ public class LimboKeysScript : MonoBehaviour
             yield return null;
             timer += Time.deltaTime;
             foreach (var i in new[] { 0, 1, 6, 7 })
-                Keys[i].transform.localPosition = new Vector3(InitKeyPositions[i].x - (Mathf.Sin((timer / duration) * Mathf.PI) * movementOut), 0,
+                Keys[i].transform.localPosition = new Vector3(InitKeyPositions[i].x + (Mathf.Sin((timer / duration) * Mathf.PI) * movementOut), 0,
                     Easing.InOutSine(timer, InitKeyPositions[i].z, InitKeyPositions[i].z - 0.08f, duration));
             foreach (var i in new[] { 2, 3, 4, 5 })
-                Keys[i].transform.localPosition = new Vector3(InitKeyPositions[i].x + (Mathf.Sin((timer / duration) * Mathf.PI) * movementOut), 0,
+                Keys[i].transform.localPosition = new Vector3(InitKeyPositions[i].x - (Mathf.Sin((timer / duration) * Mathf.PI) * movementOut), 0,
                     Easing.InOutSine(timer, InitKeyPositions[i].z, InitKeyPositions[i].z + 0.08f, duration));
         }
         for (int i = 0; i < 8; i++)
             Keys[i].transform.localPosition = InitKeyPositions[i];
+    }
+
+    private IEnumerator PerformRevolution(bool isClock, float duration = 0.55f)     //Duration of one beat = 0.3s
+    {
+        //Gotta love polar coordinates! :D
+        var radii = new List<float>();
+        for (int i = 0; i < 8; i++)
+            radii.Add(Mathf.Sqrt(Mathf.Pow(Keys[i].transform.localPosition.x, 2) + Mathf.Pow(Keys[i].transform.localPosition.z + 0.02f, 2)));
+            var initAngles = new List<float>();
+        for (int i = 0; i < 8; i++)
+            initAngles.Add(Mathf.Atan((Keys[i].transform.localPosition.z + 0.02f) / Keys[i].transform.localPosition.x) + (i < 4 ? Mathf.PI : 0));
+        float timer = isClock ? 0 : duration;
+        while (isClock ? (timer < duration) : timer > 0)
+        {
+            yield return null;
+            timer += isClock ? Time.deltaTime : -Time.deltaTime;
+            for (int i = 0; i < 2; i++)
+                Keys[i * 7].transform.localPosition = new Vector3(Easing.InOutSine(timer, InitKeyPositions[i * 7].x, InitKeyPositions[4 - i].x, duration), 0,        //4 - i: i = 0, 7 => i = 4, 3
+                    Easing.InOutSine(timer, InitKeyPositions[i * 7].z, InitKeyPositions[4 - i].z, duration));
+            for (int i = 0; i < 8; i++)
+                if (i != 0 && i != 7)
+                    Keys[i].transform.localPosition = new Vector3(radii[i] * Mathf.Cos(Easing.InOutSine(timer, initAngles[i], initAngles[i] - Mathf.PI, duration)), 0,
+                        Easing.InOutSine(timer, -0.02f, 0.02f, duration)
+                            + (radii[i] * Mathf.Sin(Easing.InOutSine(timer, initAngles[i], initAngles[i] - Mathf.PI, duration))));
+            for (int i = 0; i < 8; i++)
+                Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, Easing.InOutSine(timer, 0, 180, duration), Keys[i].transform.localEulerAngles.z);
+        }
+        for (int i = 0; i < 8; i++)
+        {
+            Keys[i].transform.localPosition = InitKeyPositions[i];
+            Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, isClock ? 180 : 0, Keys[i].transform.localEulerAngles.z);
+        }
     }
 }
