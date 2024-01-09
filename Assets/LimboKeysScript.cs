@@ -17,6 +17,7 @@ public class LimboKeysScript : MonoBehaviour
     public KMSelectable Selectable;
     public SpriteRenderer[] Keys;
     public SpriteRenderer Focus;
+    public SpriteRenderer DecoyKey;
 
     private KMAudio.KMAudioRef Sound;
     private List<Vector3> InitKeyPositions = new List<Vector3>();
@@ -58,10 +59,11 @@ public class LimboKeysScript : MonoBehaviour
         for (int i = 0; i < 8; i++)
         {
             InitKeyPositions.Add(Keys[i].transform.localPosition);
-            //Keys[i].color = Color.clear;
-            //Keys[i].transform.localPosition = Vector3.up * Keys[i].transform.localPosition.y;
+            Keys[i].color = Color.clear;
+            Keys[i].transform.localPosition = Vector3.up * Keys[i].transform.localPosition.y;
         }
         Focus.color = Color.clear;
+        DecoyKey.gameObject.SetActive(true);
     }
 
     // Use this for initialization
@@ -82,8 +84,7 @@ public class LimboKeysScript : MonoBehaviour
     }
 
     private IEnumerator Intro(float focusFadeInDur = 0.5f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f,
-        float intervalBetweenMvmts = 0.3f, float moveDur = 0.2f,
-        float greenInOutDur = 0.3f, float greenSustain = 0.4f)      //Intro must last 4.8s
+        float moveDur = 0.2f, float greenInOutDur = 0.3f, float greenSustain = 0.4f)                                     //Intro must last 4.8s
     {
         if (Sound != null)
             Sound.StopSound();
@@ -95,9 +96,14 @@ public class LimboKeysScript : MonoBehaviour
             timer += Time.deltaTime;
             Focus.color = new Color(1, 1, 1, Easing.OutSine(timer, 0, 1, focusFlashDur));
             Focus.transform.localScale = Vector3.one * Easing.OutExpo(timer, 0.025f, 0.03f, focusFadeInDur);
+            DecoyKey.color = new Color(1, 0, 0, Easing.OutExpo(timer, 1, 0, focusFlashDur));
+            DecoyKey.transform.localScale = Vector3.one * Easing.OutExpo(timer, 0.0225f, 0, focusFadeInDur);
         }
         Focus.color = Color.white;
         Focus.transform.localScale = Vector3.one * 0.03f;
+        DecoyKey.color = Color.red;
+        DecoyKey.transform.localScale = Vector3.one * 0.0225f;
+        DecoyKey.gameObject.SetActive(false);
         timer = 0;
         while (timer < focusFlashDur)
         {
@@ -219,8 +225,8 @@ public class LimboKeysScript : MonoBehaviour
         }
     }
 
-    private IEnumerator SwapSequence(float in)
+    private IEnumerator SwapSequence(float interval)
     {
-
+        yield return null;
     }
 }
