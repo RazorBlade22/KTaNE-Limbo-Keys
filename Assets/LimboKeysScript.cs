@@ -40,7 +40,15 @@ public class LimboKeysScript : MonoBehaviour
         new List<int>() { 0, 7, 6, 4, 5, 3, 2, 1 },     //Top-left stays, two diagonal swaps, bottom-right triplet cycles clockwise
         new List<int>() { 6, 5, 3, 4, 2, 1, 0, 7 },     //Top-right stays, two diagonal swaps, bottom-left triplet cycles clockwise
         new List<int>() { 6, 5, 4, 3, 2, 1, 7, 0 },     //Bottom-left stays, two diagonal swaps, top-right triplet cycles clockwise
-        new List<int>() { 1, 7, 6, 5, 4, 3, 2, 0 }      //Bottom-right stays, two diagonal swaps, top-left triplet cycles clockwise
+        new List<int>() { 1, 7, 6, 5, 4, 3, 2, 0 },     //Bottom-right stays, two diagonal swaps, top-left triplet cycles clockwise
+        new List<int>() { 6, 5, 3, 4, 2, 1, 7, 0 },     //One diagonal swap, top-right and bottom-left triplets cycle clockwise
+        new List<int>() { 7, 5, 4, 2, 3, 1, 0, 6 },     //One diagonal swap, top-right and bottom-left triplets cycle anticlockwise
+        new List<int>() { 1, 7, 6, 4, 5, 3, 2, 0 },     //One diagonal swap, top-left and bottom-right triplets cycle clockwise
+        new List<int>() { 7, 0, 6, 5, 3, 4, 2, 1 },     //One diagonal swap, top-left and bottom-right triplets cycle anticlockwise
+        new List<int>() { 6, 2, 3, 4, 5, 1, 7, 0 },     //Jigsaw swap, triplet at top-right
+        new List<int>() { 7, 0, 6, 2, 3, 4, 5, 1 },     //Jigsaw swap, triplet at top-left
+        new List<int>() { 1, 5, 3, 4, 2, 6, 7, 0 },     //Jigsaw swap, triplet at bottom-left
+        new List<int>() { 7, 0, 1, 5, 3, 4, 2, 6 },     //Jigsaw swap, triplet at bottom-right
     };
 
     void Awake()
@@ -71,10 +79,11 @@ public class LimboKeysScript : MonoBehaviour
     void DisplayPress()
     {
         //StartCoroutine(Intro());
-        //SwapPos += 1;
-        //SwapPos %= StandardSwaps.Count();
-        StartCoroutine(PerformRevolution(temp));
-        temp = !temp;
+        StartCoroutine(PerformSwap(StandardSwaps[SwapPos]));
+        SwapPos += 1;
+        SwapPos %= StandardSwaps.Count();
+        //StartCoroutine(PerformRevolution(temp));
+        //temp = !temp;
     }
 
     private IEnumerator Intro(float focusFadeInDur = 0.5f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f,
