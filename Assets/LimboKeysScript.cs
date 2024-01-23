@@ -16,13 +16,18 @@ public class LimboKeysScript : MonoBehaviour
     public KMAudio Audio;
     public KMSelectable Selectable;
     public SpriteRenderer[] Keys;
+    public SpriteRenderer[] Glows;
     public SpriteRenderer Focus;
     public SpriteRenderer DecoyKey;
 
     private KMAudio.KMAudioRef Sound;
+    private Coroutine KeyMovementAnim;
     private List<Vector3> InitKeyPositions = new List<Vector3>();
-    private List<int> RotationIDs = new List<int>();
-    private int SwapPos;
+    private List<int> SwapIDs = new List<int>();
+    private List<int> Colours = new List<int>();
+    //private Color32[] ColoursForRends = new Color32[] { new Color32(244, 60, 87, 255), new Color32(255, 255, 132, 255), new Color32(210, 255, 109, 255), new Color32(135, 255, 187, 255), new Color32(168, 255, 253, 255), new Color32(90, 136, 255, 255), new Color32(181, 65, 255, 255), new Color32(254, 92, 255, 255) };
+    private Color32[] ColoursForRends = new Color32[] { new Color32(255, 0, 0, 255), new Color32(255, 255, 20, 255), new Color32(20, 200, 10, 255), new Color32(50, 245, 255, 255), new Color32(0, 0, 255, 255), new Color32(155, 21, 99, 255), new Color32(255, 100, 255, 255), new Color32(255, 255, 255, 255) };
+    private int CurrentSwap, DesiredKeyPos, Selected;
     private bool CannotPress;
 
     private List<List<int>> StandardSwaps = new List<List<int>>()
@@ -52,6 +57,11 @@ public class LimboKeysScript : MonoBehaviour
         new List<int>() { 7, 0, 1, 5, 3, 4, 2, 6 },     //Jigsaw swap, triplet at bottom-right
     };
 
+    private Vector3 PolarToCartesian(float angle) //Assumed radius 1, angle taken in radians from the +ve x-axis, anticlockwise
+    {
+        return new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle));
+    }
+
     void Awake()
     {
         _moduleID = _moduleIdCounter++;
@@ -61,6 +71,7 @@ public class LimboKeysScript : MonoBehaviour
             InitKeyPositions.Add(Keys[i].transform.localPosition);
             Keys[i].color = Color.clear;
             Keys[i].transform.localPosition = Vector3.up * Keys[i].transform.localPosition.y;
+            Glows[i].color = Color.clear;
         }
         Focus.color = Color.clear;
         DecoyKey.gameObject.SetActive(true);
@@ -78,6 +89,16 @@ public class LimboKeysScript : MonoBehaviour
 
     }
 
+    void GenerateSwaps()
+    {
+        DesiredKeyPos = Rnd.Range(0, 8);
+        SwapIDs = new List<int>();
+        for (int i = 0; i < 25 - 3; i++) //For the three special rotations
+            SwapIDs.Add(Rnd.Range(0, StandardSwaps.Count()));
+        Debug.Log(SwapIDs.Join(", "));
+        Colours = Enumerable.Range(0, 8).ToList().Shuffle();
+    }
+
     void DisplayPress()
     {
         StartCoroutine(Intro());
@@ -86,9 +107,11 @@ public class LimboKeysScript : MonoBehaviour
     private IEnumerator Intro(float focusFadeInDur = 0.5f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f,
         float moveDur = 0.2f, float greenInOutDur = 0.3f, float greenSustain = 0.4f)                                     //Intro must last 4.8s
     {
+        Selectable.transform.localScale = Vector3.zero;
+        GenerateSwaps();
         if (Sound != null)
             Sound.StopSound();
-        Sound = Audio.HandlePlaySoundAtTransformWithRef("music", transform);
+        Sound = Audio.HandlePlaySoundAtTransformWithRef("music", transform, false);
         float timer = 0;
         while (timer < focusFadeInDur)
         {
@@ -135,15 +158,14 @@ public class LimboKeysScript : MonoBehaviour
             Keys[i].transform.localPosition = InitKeyPositions[i];
             Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, 0, Keys[i].transform.localEulerAngles.z);
         }
-        var CorrectKey = Rnd.Range(0, 8);
         timer = 0;
         while (timer < greenInOutDur)
         {
             yield return null;
             timer += Time.deltaTime;
-            Keys[CorrectKey].color = Color.Lerp(Color.red, Color.green, timer / greenInOutDur);
+            Keys[DesiredKeyPos].color = Color.Lerp(Color.red, Color.green, timer / greenInOutDur);
         }
-        Keys[CorrectKey].color = Color.green;
+        Keys[DesiredKeyPos].color = Color.green;
         timer = 0;
         while (timer < greenSustain)
         {
@@ -155,13 +177,19 @@ public class LimboKeysScript : MonoBehaviour
         {
             yield return null;
             timer += Time.deltaTime;
-            Keys[CorrectKey].color = Color.Lerp(Color.green, Color.red, timer / greenInOutDur);
+            Keys[DesiredKeyPos].color = Color.Lerp(Color.green, Color.red, timer / greenInOutDur);
         }
-        Keys[CorrectKey].color = Color.red;
+        Keys[DesiredKeyPos].color = Color.red;
+        StartCoroutine(SwapSequence());
     }
 
     private IEnumerator PerformSwap(List<int> newPositions, float duration = 0.25f)     //Duration of one beat = 0.3s
     {
+        for (int i = 0; i < 8; i++)
+        {
+            Keys[i].transform.localPosition = InitKeyPositions[i];
+            Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, CurrentSwap > 9 && CurrentSwap < 18 ? 180 : 0, Keys[i].transform.localEulerAngles.z);
+        }
         float timer = 0;
         while (timer < duration)
         {
@@ -177,6 +205,12 @@ public class LimboKeysScript : MonoBehaviour
 
     private IEnumerator TopWithBottomHalf(float duration = 0.55f, float movementOut = 0.015f)
     {
+        for (int i = 0; i < 8; i++)
+        {
+            Keys[i].transform.localPosition = InitKeyPositions[i];
+            Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, 0, Keys[i].transform.localEulerAngles.z);
+        }
+
         float timer = 0;
         while (timer < duration)
         {
@@ -195,11 +229,16 @@ public class LimboKeysScript : MonoBehaviour
 
     private IEnumerator PerformRevolution(bool isClock, float duration = 0.55f)     //Duration of one beat = 0.3s
     {
+        for (int i = 0; i < 8; i++)
+        {
+            Keys[i].transform.localPosition = InitKeyPositions[i];
+            Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, isClock ? 0 : 180, Keys[i].transform.localEulerAngles.z);
+        }
         //Gotta love polar coordinates! :D
         var radii = new List<float>();
         for (int i = 0; i < 8; i++)
             radii.Add(Mathf.Sqrt(Mathf.Pow(Keys[i].transform.localPosition.x, 2) + Mathf.Pow(Keys[i].transform.localPosition.z + 0.02f, 2)));
-            var initAngles = new List<float>();
+        var initAngles = new List<float>();
         for (int i = 0; i < 8; i++)
             initAngles.Add(Mathf.Atan((Keys[i].transform.localPosition.z + 0.02f) / Keys[i].transform.localPosition.x) + (i < 4 ? Mathf.PI : 0));
         float timer = isClock ? 0 : duration;
@@ -225,8 +264,157 @@ public class LimboKeysScript : MonoBehaviour
         }
     }
 
-    private IEnumerator SwapSequence(float interval)
+    private IEnumerator SwapSequence()
     {
-        yield return null;
+        var swaps = new List<IEnumerator>();
+        var intervals = new List<float>();
+        for (int i = 0; i < 5; i++)
+        {
+            swaps.Add(PerformSwap(StandardSwaps[SwapIDs[i]]));
+            intervals.Add(0.3f);
+            DesiredKeyPos = StandardSwaps[SwapIDs[i]].IndexOf(DesiredKeyPos);
+            Debug.Log(DesiredKeyPos);
+        }
+        swaps.Add(TopWithBottomHalf());
+        intervals.Add(0.6f);
+        DesiredKeyPos = Array.IndexOf(new[] { 2, 3, 0, 1, 6, 7, 4, 5 }, DesiredKeyPos);
+        Debug.Log(DesiredKeyPos);
+        for (int i = 5; i < 8; i++)
+        {
+            swaps.Add(PerformSwap(StandardSwaps[SwapIDs[i]]));
+            intervals.Add(0.3f);
+            DesiredKeyPos = StandardSwaps[SwapIDs[i]].IndexOf(DesiredKeyPos);
+            Debug.Log(DesiredKeyPos);
+        }
+        swaps.Add(PerformRevolution(true));
+        intervals.Add(0.6f);
+        DesiredKeyPos = Array.IndexOf(new[] { 4, 5, 6, 7, 0, 1, 2, 3 }, DesiredKeyPos);
+        Debug.Log(DesiredKeyPos);
+        for (int i = 8; i < 16; i++)
+        {
+            swaps.Add(PerformSwap(StandardSwaps[SwapIDs[i]]));
+            intervals.Add(0.3f);
+            DesiredKeyPos = StandardSwaps[SwapIDs[i]].IndexOf(DesiredKeyPos);
+            Debug.Log(DesiredKeyPos);
+        }
+        swaps.Add(PerformRevolution(false));
+        intervals.Add(0.6f);
+        DesiredKeyPos = Array.IndexOf(new[] { 4, 5, 6, 7, 0, 1, 2, 3 }, DesiredKeyPos);
+        Debug.Log(DesiredKeyPos);
+        for (int i = 16; i < 22; i++)
+        {
+            swaps.Add(PerformSwap(StandardSwaps[SwapIDs[i]]));
+            intervals.Add(0.3f);
+            DesiredKeyPos = StandardSwaps[SwapIDs[i]].IndexOf(DesiredKeyPos);
+            Debug.Log(DesiredKeyPos);
+        }
+        foreach (var swap in swaps)
+        {
+            if (KeyMovementAnim != null)
+                StopCoroutine(KeyMovementAnim);
+            KeyMovementAnim = StartCoroutine(swap);
+            float timer = 0;
+            while (timer < intervals.First())
+            {
+                yield return null;
+                timer += Time.deltaTime;
+            }
+            intervals.RemoveAt(0);
+            CurrentSwap++;
+        }
+        StartCoroutine(FinishSwaps());
+    }
+
+    private IEnumerator FinishSwaps(float interval = 0.0625f)
+    {
+        var order = new[] { 7, 6, 0, 5, 1, 4, 2, 3 };
+        for (int i = 0; i < 8; i++)
+        {
+            Keys[i].transform.localPosition = InitKeyPositions[i];
+            Keys[i].transform.localEulerAngles = new Vector3(Keys[i].transform.localEulerAngles.x, 0, Keys[i].transform.localEulerAngles.z);
+        }
+        for (int i = 0; i < Keys.Length; i++)
+        {
+            StartCoroutine(SpinKey(order[i]));
+            StartCoroutine(MoveKey(order[i], i == Keys.Length - 1));
+            float timer = 0;
+            while (timer < interval)
+            {
+                yield return null;
+                timer += Time.deltaTime;
+            }
+        }
+    }
+
+    private IEnumerator SpinKey(int pos, float duration = 0.75f, byte glowAlpha = 64)
+    {
+        var initColour = Keys[pos].color;
+        var initGlowColour = new Color32(ColoursForRends[pos].r, ColoursForRends[pos].g, ColoursForRends[pos].b, 0);
+        var finalGlowColour = new Color32(ColoursForRends[pos].r, ColoursForRends[pos].g, ColoursForRends[pos].b, glowAlpha);
+        float timer = 0;
+        while (timer < duration)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            Keys[pos].transform.localEulerAngles = new Vector3(Keys[pos].transform.localEulerAngles.x, Easing.OutExpo(timer, 0, 360, duration), Keys[pos].transform.localEulerAngles.z);
+            Keys[pos].color = Color32.Lerp(initColour, ColoursForRends[pos], timer / duration);
+            Glows[pos].color = Color32.Lerp(initGlowColour, finalGlowColour, timer / duration);
+        }
+        Keys[pos].transform.localEulerAngles = new Vector3(Keys[pos].transform.localEulerAngles.x, 0, Keys[pos].transform.localEulerAngles.z);
+        Keys[pos].color = ColoursForRends[pos];
+        Glows[pos].color = finalGlowColour;
+    }
+
+    private IEnumerator MoveKey(int pos, bool triggerFlashes, float duration = 0.75f, byte glowAlpha = 64, byte keyAlpha = 128)
+    {
+        var init = Keys[pos].transform.localPosition;
+        var target = PolarToCartesian(new[] { 2, 3, 4, 5, 6, 7, 0, 1 }[pos] * (Mathf.PI / 4)) * 0.06f;
+        var initGlowColour = new Color32(ColoursForRends[pos].r, ColoursForRends[pos].g, ColoursForRends[pos].b, glowAlpha);
+        var finalGlowColour = new Color32(ColoursForRends[pos].r, ColoursForRends[pos].g, ColoursForRends[pos].b, 0);
+        var finalKeyColour = new Color32(ColoursForRends[pos].r, ColoursForRends[pos].g, ColoursForRends[pos].b, keyAlpha);
+        float timer = 0;
+        while (timer < 0.8f)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+        }
+        timer = 0;
+        while (timer < duration)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            Keys[pos].transform.localPosition = new Vector3(Easing.InOutQuad(timer, init.x, target.x, duration), 0, Easing.InOutQuad(timer, init.z, target.z, duration));
+            Keys[pos].color = Color32.Lerp(ColoursForRends[pos], finalKeyColour, timer / duration);
+            Glows[pos].color = Color32.Lerp(initGlowColour, finalGlowColour, timer / duration);
+        }
+        Keys[pos].transform.localPosition = target;
+        Keys[pos].color = finalKeyColour;
+        Glows[pos].color = finalGlowColour;
+        if (triggerFlashes)
+            StartCoroutine(DoFlashes());
+    }
+
+    private IEnumerator DoFlashes(float sustain = 0.5f, float glowAlpha = 1 / 2f)
+    {
+        Selectable.transform.localScale = new Vector3(0.75f, 0.001f, 0.75f);
+        var order = Enumerable.Range(0, 8).ToList();
+        var i = Selected = 0;
+        while (true)
+        {
+            Keys[order[i]].color = new Color(Keys[order[i]].color.r, Keys[order[i]].color.g, Keys[order[i]].color.b, 1);
+            Glows[order[i]].color = new Color(Glows[order[i]].color.r, Glows[order[i]].color.g, Glows[order[i]].color.b, glowAlpha);
+            float timer = 0;
+            while (timer < sustain)
+            {
+                yield return null;
+                timer += Time.deltaTime;
+                Keys[order[i]].color = new Color(Keys[order[i]].color.r, Keys[order[i]].color.g, Keys[order[i]].color.b, Mathf.Lerp(1, 1/2f, timer / sustain));
+                Glows[order[i]].color = new Color(Glows[order[i]].color.r, Glows[order[i]].color.g, Glows[order[i]].color.b, Mathf.Lerp(glowAlpha, 0, timer / sustain));
+            }
+            Keys[order[i]].color = new Color(Keys[order[i]].color.r, Keys[order[i]].color.g, Keys[order[i]].color.b, 1/2f);
+            Glows[order[i]].color = new Color(Glows[order[i]].color.r, Glows[order[i]].color.g, Glows[order[i]].color.b, 0);
+            i = (i + 1) % Keys.Length;
+            Selected = (Selected + 1) % Keys.Length;
+        }
     }
 }
