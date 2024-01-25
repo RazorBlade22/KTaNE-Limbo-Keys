@@ -394,7 +394,7 @@ public class LimboKeysScript : MonoBehaviour
             StartCoroutine(DoFlashes());
     }
 
-    private IEnumerator DoFlashes(float sustain = 0.75f, float glowAlpha = 1 / 2f)
+    private IEnumerator DoFlashes(float sustain = 0.60f, float glowAlpha = 1 / 2f)
     {
         Selectable.transform.localScale = new Vector3(0.75f, 0.001f, 0.75f);
         var order = Enumerable.Range(0, 8).ToList();
