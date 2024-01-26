@@ -15,10 +15,14 @@ public class LimboKeysScript : MonoBehaviour
     public KMBombInfo Bomb;
     public KMAudio Audio;
     public KMSelectable Selectable;
+    public Sprite[] PossibleTexts;
     public SpriteRenderer[] Keys;
     public SpriteRenderer[] Glows;
     public SpriteRenderer Focus;
     public SpriteRenderer DecoyKey;
+    public SpriteRenderer Eye;
+    public SpriteRenderer SelectedText;
+    public MeshRenderer Display;
 
     private KMAudio.KMAudioRef Sound;
     private Coroutine KeyCycleAnim, KeyMovementAnim;
@@ -28,7 +32,7 @@ public class LimboKeysScript : MonoBehaviour
     //private Color32[] ColoursForRends = new Color32[] { new Color32(244, 60, 87, 255), new Color32(255, 255, 132, 255), new Color32(210, 255, 109, 255), new Color32(135, 255, 187, 255), new Color32(168, 255, 253, 255), new Color32(90, 136, 255, 255), new Color32(181, 65, 255, 255), new Color32(254, 92, 255, 255) };
     private Color32[] ColoursForRends = new Color32[] { new Color32(255, 0, 0, 255), new Color32(255, 255, 20, 255), new Color32(20, 200, 10, 255), new Color32(50, 245, 255, 255), new Color32(0, 0, 255, 255), new Color32(155, 21, 99, 255), new Color32(255, 100, 255, 255), new Color32(255, 255, 255, 255) };
     private int CurrentSwap, DesiredKeyPos, Selected;
-    private bool CannotPress, ReadyForSubmission;
+    private bool ReadyForSubmission;
 
     private List<List<int>> StandardSwaps = new List<List<int>>()
     {
@@ -75,6 +79,8 @@ public class LimboKeysScript : MonoBehaviour
         }
         Focus.color = Color.clear;
         DecoyKey.gameObject.SetActive(true);
+        Eye.gameObject.SetActive(false);
+        SelectedText.gameObject.SetActive(false);
     }
 
     // Use this for initialization
@@ -101,24 +107,149 @@ public class LimboKeysScript : MonoBehaviour
 
     void DisplayPress()
     {
+        Selectable.AddInteractionPunch();
         if (!ReadyForSubmission)
             StartCoroutine(Intro());
         else
+            StartCoroutine(AfterSelection(Selected == DesiredKeyPos ? 0 : 1, Selected));
+    }
+
+    private IEnumerator AfterSelection(int state, int selected, float flickerMin = 0.3f, float flickerMax = 0.1f, float colourFlashDur = 0.6f, float eyeFadeInDur = 0.6f, float suspenseDur = 1.8f, float revealTextDur = 0.6f, float sustainDur = 0.6f)
+    {
+        ReadyForSubmission = false;
+        Selectable.transform.localScale = Vector3.zero;
+        if (KeyCycleAnim != null)
+            StopCoroutine(KeyCycleAnim);
+        for (int i = 0; i < Keys.Length; i++)
+            Keys[i].color = Glows[i].color = new Color(Glows[i].color.r, Glows[i].color.g, Glows[i].color.b, 0);
+        Display.material.color = ColoursForRends[selected];
+        float timer = 0;
+        while (timer < colourFlashDur)
         {
-            ReadyForSubmission = false;
-            Selectable.transform.localScale = Vector3.zero;
-            if (KeyCycleAnim != null)
-                StopCoroutine(KeyCycleAnim);
+            yield return null;
+            timer += Time.deltaTime;
+            Display.material.color = Color.Lerp(ColoursForRends[selected], Color.black, timer / colourFlashDur);
+        }
+        Display.material.color = Color.black;
+        Eye.color = new Color(1, 1, 0, 0);
+        Eye.gameObject.SetActive(true);
+        timer = 0;
+        while (timer < eyeFadeInDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            Eye.color = new Color(1, 1, 0, Mathf.Max(Mathf.Lerp(0, 1, timer / eyeFadeInDur) - Rnd.Range(flickerMin, flickerMax), 0));
+        }
+        Eye.color = new Color(1, 1, 0, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+        timer = 0;
+        while (timer < suspenseDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            Eye.color = new Color(1, 1, 0, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+        }
+        var targetColour = Color.red;
+        if (state == 0)
+            targetColour = Color.green;
+        SelectedText.sprite = PossibleTexts[state];
+        SelectedText.color = new Color(1, 1, 0, 0);
+        SelectedText.gameObject.SetActive(true);
+        timer = 0;
+        while (timer < revealTextDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            SelectedText.color = Color.Lerp(new Color(1, 1, 0, 0), targetColour, timer / revealTextDur);
+            SelectedText.color = new Color(SelectedText.color.r, SelectedText.color.g, SelectedText.color.b, Mathf.Max(SelectedText.color.a - Rnd.Range(flickerMin, flickerMax), 0));
+            Eye.color = Color.Lerp(new Color(1, 1, 0, 1), targetColour, timer / revealTextDur);
+            Eye.color = new Color(Eye.color.r, Eye.color.g, Eye.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+        }
+        SelectedText.color = Eye.color = targetColour;
+        SelectedText.color = new Color(SelectedText.color.r, SelectedText.color.g, SelectedText.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+        Eye.color = new Color(Eye.color.r, Eye.color.g, Eye.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+        timer = 0;
+        while (timer < sustainDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            SelectedText.color = new Color(SelectedText.color.r, SelectedText.color.g, SelectedText.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+            Eye.color = new Color(Eye.color.r, Eye.color.g, Eye.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+        }
+        if (state == 0)
+        {
+            Module.HandlePass();
+            while (true)
+            {
+                yield return null;
+                SelectedText.color = new Color(SelectedText.color.r, SelectedText.color.g, SelectedText.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+                Eye.color = new Color(Eye.color.r, Eye.color.g, Eye.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+            }
+        }
+        else
+        {
+            Module.HandleStrike();
+            CurrentSwap = 0;
+            StartCoroutine(HandleStrikeAnim(flickerMin, flickerMax));
+        }
+    }
+
+    private IEnumerator HandleStrikeAnim(float flickerMin, float flickerMax, float pauseDur = 1f, float fadeOutDur = 0.3f, float speenDur = 1.2f, float sustainDur = 0.06f, float retractDur = 0.3f)
+    {
+        float timer = 0;
+        while (timer < pauseDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+        }
+        timer = 0;
+        while (timer < fadeOutDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            SelectedText.color = new Color(SelectedText.color.r, SelectedText.color.g, SelectedText.color.b, Mathf.Max(Mathf.Lerp(1, 0, timer / fadeOutDur) - Rnd.Range(flickerMin, flickerMax), 0));
+            Eye.color = new Color(Eye.color.r, Eye.color.g, Eye.color.b, Mathf.Max(Mathf.Lerp(1, 0, timer / fadeOutDur) - Rnd.Range(flickerMin, flickerMax), 0));
+        }
+        SelectedText.gameObject.SetActive(false);
+        Eye.gameObject.SetActive(false);
+        timer = 0;
+        while (timer < speenDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
             for (int i = 0; i < Keys.Length; i++)
             {
-                Keys[i].color = new Color(Keys[i].color.r, Keys[i].color.g, Keys[i].color.b, 1 / 2f);
-                Glows[i].color = new Color(Glows[i].color.r, Glows[i].color.g, Glows[i].color.b, 0);
+                Keys[i].color = Color.Lerp(new Color(1, 0, 0, 0), Color.red, timer / speenDur);
+                Keys[i].transform.localScale = Vector3.one * Easing.OutExpo(timer, 0, 0.025f, speenDur);
+                Keys[i].transform.localPosition = PolarToCartesian(Easing.OutExpo(timer, (Mathf.PI / 4f) * i, (Mathf.PI / 4f) * (i + 2), speenDur)) * Easing.OutExpo(timer, 0, 0.06f, speenDur);
             }
-            if (Selected == DesiredKeyPos)
-                Module.HandlePass();
-            else
-                Module.HandleStrike();
         }
+        for (int i = 0; i < Keys.Length; i++)
+        {
+            Keys[i].color = Color.red;
+            Keys[i].transform.localScale = Vector3.one * 0.025f;
+            Keys[i].transform.localPosition = PolarToCartesian((Mathf.PI / 4f) * (i + 2)) * 0.06f;
+        }
+        timer = 0;
+        while (timer < sustainDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+        }
+        timer = 0;
+        while (timer < retractDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            for (int i = 0; i < Keys.Length; i++)
+                Keys[i].transform.localPosition = PolarToCartesian((Mathf.PI / 4f) * (i + 2)) * Easing.InSine(timer, 0.06f, 0, retractDur);
+        }
+        for (int i = 0; i < Keys.Length; i++)
+        {
+            Keys[i].transform.localPosition = Vector3.up * Keys[i].transform.localPosition.y;
+            Keys[i].color = Color.clear;
+        }
+        DecoyKey.gameObject.SetActive(true);
+        Selectable.transform.localScale = new Vector3(0.75f, 0.001f, 0.75f);
     }
 
     private IEnumerator Intro(float focusFadeInDur = 0.5f, float focusFlashDur = 0.9f, float keyFadeDur = 0.6f,
