@@ -193,7 +193,7 @@ public class LimboKeysScript : MonoBehaviour
         }
     }
 
-    private IEnumerator HandleStrikeAnim(float flickerMin, float flickerMax, float pauseDur = 1f, float fadeOutDur = 0.3f, float speenDur = 1.2f, float sustainDur = 0.06f, float retractDur = 0.3f)
+    private IEnumerator HandleStrikeAnim(float flickerMin, float flickerMax, float pauseDur = 1.5f, float fadeOutDur = 0.3f, float speenDur = 1.2f, float sustainDur = 0.06f, float retractDur = 0.3f)
     {
         float timer = 0;
         while (timer < pauseDur)
