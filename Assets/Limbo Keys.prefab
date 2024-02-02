@@ -1081,6 +1081,10 @@ MonoBehaviour:
   Bomb: {fileID: 114900650139231772}
   Audio: {fileID: 114193815855607954}
   Selectable: {fileID: 114244462611800974}
+  PossibleTexts:
+  - {fileID: 21300000, guid: 3d7070d55b81a4a4585d73cfb378be86, type: 3}
+  - {fileID: 21300000, guid: 284a5b762e613664e9ce1ee571befcd0, type: 3}
+  - {fileID: 21300000, guid: 910ae0163a663e24fa60ecf4cfb1608a, type: 3}
   Keys:
   - {fileID: 212424224870228630}
   - {fileID: 212364372998083776}
@@ -1101,6 +1105,10 @@ MonoBehaviour:
   - {fileID: 212440478551021956}
   Focus: {fileID: 212054632498630542}
   DecoyKey: {fileID: 212953878390644870}
+  Eye: {fileID: 212931970918345678}
+  SelectedText: {fileID: 212662667335974026}
+  Display: {fileID: 23223467545408392}
+  ModuleBG: {fileID: 23846878860089574}
 --- !u!114 &114193815855607954
 MonoBehaviour:
   m_ObjectHideFlags: 1
