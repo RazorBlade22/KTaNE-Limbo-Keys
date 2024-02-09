@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine;
 using KModkit;
 using Rnd = UnityEngine.Random;
+using NUnit.Framework.Internal.Commands;
 
 public class LimboKeysScript : MonoBehaviour
 {
@@ -14,6 +15,7 @@ public class LimboKeysScript : MonoBehaviour
     public KMBombModule Module;
     public KMBombInfo Bomb;
     public KMAudio Audio;
+    public KMBossModule Boss;
     public KMSelectable Selectable;
     public Sprite[] PossibleTexts;
     public SpriteRenderer[] Keys;
@@ -24,6 +26,7 @@ public class LimboKeysScript : MonoBehaviour
     public SpriteRenderer SelectedText;
     public MeshRenderer Display;
     public MeshRenderer ModuleBG;
+    public static string[] IgnoredModules = null;
 
     private Settings _Settings;
 
@@ -52,14 +55,90 @@ public class LimboKeysScript : MonoBehaviour
         _Settings = SettingsConfig.Settings; // This reads the settings from the file, or creates a new file if it does not exist
         SettingsConfig.Settings = _Settings; // This writes any updates or fixes if there's an issue with the file
 
-        MuteMusic = _Settings.MuteMusic || true;
+        MuteMusic = _Settings.MuteMusic;
         FocusMode = _Settings.FocusMode;
-        BossMode = _Settings.BossMode;
+        BossMode = _Settings.BossMode || true;
 
         if (BossMode)
             FocusMode = true;
         if (FocusMode || BossMode)
             MuteMusic = false;
+        if (TwitchPlaysActive)  //Disable FocusMode on TP, as it cannot be done
+        {
+            FocusMode = false;
+            Debug.LogFormat("[Limbo Keys #{0}] Focus mode has been disabled, as Twitch Plays is active.", _moduleID);
+        }
+    }
+
+    void SortOutMissionDescription()
+    {
+        try
+        {
+            string description = Application.isEditor ? "" : Missions.Description.UnwrapOr("");
+            var matches = Regex.Matches(description, @"^(?:// )?\[Revision ?Helper\] (.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            for (int i = 0; i < matches.Count; i++)
+            {
+                if (matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4) == "3an ")
+                {
+                    try
+                    {
+                        MissionOverThreeIncrement = float.Parse(matches[i].Groups[1].Value.Substring(4, matches[i].Groups[1].Value.Length - 4));
+                        MissionInfo[1] = true;
+                    }
+                    catch
+                    {
+                        Debug.LogFormat("[Revision Helper #{0}] Could not assign a new value for the over 3 answer increment: ignoring line.", _moduleID);
+                    }
+                }
+                else if (matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4) == "act ")
+                {
+                    try
+                    {
+                        MissionCountdown = float.Parse(matches[i].Groups[1].Value.Substring(4, matches[i].Groups[1].Value.Length - 4));
+                        MissionInfo[2] = true;
+                    }
+                    catch
+                    {
+                        Debug.LogFormat("[Revision Helper #{0}] Could not assign a new value for the base countdown time: ignoring line.", _moduleID);
+                    }
+                }
+                else if (matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4) == "bon ")
+                {
+                    try
+                    {
+                        MissionBonusTime = float.Parse(matches[i].Groups[1].Value.Substring(4, matches[i].Groups[1].Value.Length - 4));
+                        MissionInfo[3] = true;
+                    }
+                    catch
+                    {
+                        Debug.LogFormat("[Revision Helper #{0}] Could not assign a new value for the Twitch Plays countdown bonus: ignoring line.", _moduleID);
+                    }
+                }
+                else if (matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4) == "lon ")
+                {
+                    try
+                    {
+                        MissionLongIncrement = float.Parse(matches[i].Groups[1].Value.Substring(4, matches[i].Groups[1].Value.Length - 4));
+                        MissionInfo[4] = true;
+                    }
+                    catch
+                    {
+                        Debug.LogFormat("[Revision Helper #{0}] Could not assign a new value for the long question increment: ignoring line.", _moduleID);
+                    }
+                }
+                if (!new[] { "3an ", "act ", "bon ", "lon " }.Contains(matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4)))
+                {
+                    var temp = matches[i].Groups[1].Value.Split(new string[] { "   " }, StringSplitOptions.None).Select((x, ix) => x.Replace("\r", "").Split(new string[] { "  " }, StringSplitOptions.None).ToList());
+                    foreach (var item in temp)
+                        MissionQuestions.Add(item);
+                    MissionInfo[0] = true;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Error(e);
+        }
     }
 
     private KMAudio.KMAudioRef Sound;
@@ -70,7 +149,7 @@ public class LimboKeysScript : MonoBehaviour
     //private Color32[] ColoursForRends = new Color32[] { new Color32(244, 60, 87, 255), new Color32(255, 255, 132, 255), new Color32(210, 255, 109, 255), new Color32(135, 255, 187, 255), new Color32(168, 255, 253, 255), new Color32(90, 136, 255, 255), new Color32(181, 65, 255, 255), new Color32(254, 92, 255, 255) };
     private Color32[] ColoursForRends = new Color32[] { new Color32(255, 0, 0, 255), new Color32(255, 255, 20, 255), new Color32(20, 200, 10, 255), new Color32(50, 245, 255, 255), new Color32(0, 0, 255, 255), new Color32(155, 21, 99, 255), new Color32(255, 100, 255, 255), new Color32(255, 255, 255, 255) };
     private int CurrentSwap, DesiredKeyPos, Selected;
-    private bool ReadyForSubmission, Solved, CannotPress;
+    private bool CannotPress, ReadyForSubmission, ReadyToMoveOn, Solved;
 
     private List<List<int>> StandardSwaps = new List<List<int>>()
     {
@@ -107,9 +186,83 @@ public class LimboKeysScript : MonoBehaviour
     void Awake()
     {
         _moduleID = _moduleIdCounter++;
-        GetSettings();
-        if (FocusMode)
-            ModuleBG.material.color = new Color(1/4f, 0, 0);
+
+        if (IgnoredModules == null)
+            IgnoredModules = GetComponent<KMBossModule>().GetIgnoredModules("Limbo Keys", new string[]{ //Ignore full bosses
+                "Limbo Keys",
+                "Spectator Sport",
+                "Sbemail Songs",
+                "Temporal Sequence",
+                "Hickory Dickory Dock",
+                "Blackout",
+                "Solve Shift",
+                "FizzBoss",
+                "Actions and Consequences",
+                "Forgetle",
+                "Reporting Anomalies",
+                "Perspective Stacking",
+                "In Order",
+                "The Nobody’s Code",
+                "OMISSION",
+                "Piano Paradox",
+                "Slight Gibberish Twist",
+                "Pointer Pointer",
+                "Forget Fractal",
+                "Queen’s War",
+                "Top 10 Numbers",
+                "Bitwise Oblivion",
+                "HyperForget",
+                "Forget Me Maybe",
+                "The Grand Prix",
+                "Remembern’t Simple",
+                "Remember Simple",
+                "8",
+                "ID Exchange",
+                "Soulsong",
+                "Forget Our Voices",
+                "Twister",
+                "Concentration",
+                "Duck Konundrum",
+                "The Board Walk",
+                "Tetrahedron",
+                "Cube Synchronization",
+                "Soulscream",
+                "+",
+                "Forget Maze Not",
+                "Black Arrows",
+                "Floor Lights",
+                "Shoddy Chess",
+                "Security Council",
+                "Keypad Directionality",
+                "Forget Any Color",
+                "Whiteout",
+                "Busy Beaver",
+                "A>N<D",
+                "Kugelblitz",
+                "OmegaForget",
+                "Iconic",
+                "The Twin",
+                "RPS Judging",
+                "Forget The Colors",
+                "Brainf---",
+                "Simon Forgets",
+                "14",
+                "Forget It Not",
+                "Übermodule",
+                "Forget Me Later",
+                "Forget Perspective",
+                "Organization",
+                "Forget Us Not",
+                "Forget Enigma",
+                "Tallordered Keys",
+                "Forget Them All",
+                "Forget This",
+                "Simon’s Stages",
+                "Forget Everything",
+                "Souvenir",
+                "Forget Me Not"
+            });
+
         Selectable.OnInteract += delegate { DisplayPress(); return false; };
         for (int i = 0; i < 8; i++)
         {
@@ -119,8 +272,6 @@ public class LimboKeysScript : MonoBehaviour
             Glows[i].color = Color.clear;
         }
         Focus.color = Color.clear;
-        DecoyKey.gameObject.SetActive(true);
-        Eye.gameObject.SetActive(false);
         SelectedText.gameObject.SetActive(false);
     }
 
@@ -128,6 +279,29 @@ public class LimboKeysScript : MonoBehaviour
     void Start()
     {
         Debug.LogFormat("[Limbo Keys #{0}] Welcome to Limbo... Let the games begin.", _moduleID);
+        GetSettings();
+        if (FocusMode)
+            ModuleBG.material.color = new Color(1 / 4f, 0, 0);
+
+        if (!BossMode)
+        {
+            DecoyKey.gameObject.SetActive(true);
+            Eye.gameObject.SetActive(false);
+        }
+        else
+        {
+            DecoyKey.gameObject.SetActive(false);
+            Eye.gameObject.SetActive(true);
+            Eye.color = Color.red;
+            Selectable.transform.localScale = Vector3.zero;
+            CannotPress = true;
+            Module.OnActivate += delegate { StartCoroutine(WaitUntilEnoughSolves()); };
+        }
+
+        if (BossMode)
+            Debug.LogFormat("[Limbo Keys #{0}] Boss mode is active.", _moduleID);
+        if (FocusMode)
+            Debug.LogFormat("[Limbo Keys #{0}] Focus mode is active.", _moduleID);
     }
 
     // Update is called once per frame
@@ -170,6 +344,42 @@ public class LimboKeysScript : MonoBehaviour
         CannotPress = false;
     }
 
+    private IEnumerator WaitUntilEnoughSolves(float redFadeDur = 4f, float keyFadeDur = 0.5f)
+    {
+        var required = Bomb.GetModuleNames().Where(x => !IgnoredModules.Contains(x)).Count();
+        while (Bomb.GetSolvedModuleNames().Where(x => !IgnoredModules.Contains(x)).Count() < required)
+            yield return new WaitForSeconds(0.1f);
+        Debug.LogFormat("[Limbo Keys #{0}] The module is now ready to be solved.", _moduleID);
+        if (!MuteMusic)
+            Sound = Audio.HandlePlaySoundAtTransformWithRef("boss mode ready", transform, false);
+        DecoyKey.gameObject.SetActive(true);
+        var decoyInitColour = DecoyKey.color;
+        DecoyKey.color = Color.clear;
+        var eyeInit = Eye.color;
+        float timer = 0;
+        while (timer < redFadeDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            var eyeValue = Mathf.Max(Mathf.Lerp(1, -1, timer / redFadeDur), 0);
+            Eye.color = eyeInit * new Color(eyeValue, eyeValue, eyeValue, Mathf.Min(Mathf.Lerp(2, 0, timer / redFadeDur), 1));
+            Display.material.color = new Color(Mathf.PingPong(Mathf.Lerp(0, 2, timer / redFadeDur), 1), 0, 0);
+        }
+        Eye.color = new Color(1, 1, 0, 1);
+        Eye.gameObject.SetActive(false);
+        timer = 0;
+        while (timer < keyFadeDur)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            DecoyKey.color = Color.Lerp(decoyInitColour * new Color(1, 1, 1, 0), decoyInitColour, timer / keyFadeDur);
+        }
+        DecoyKey.color = decoyInitColour;
+        Display.material.color = Color.black;
+        CannotPress = false;
+        Selectable.transform.localScale = new Vector3(0.75f, 0.001f, 0.75f);
+    }
+
     private IEnumerator AfterSelection(int state, int selected, float flickerMin = 0.3f, float flickerMax = 0.1f, float colourFlashDur = 0.6f, float eyeFadeInDur = 0.6f, float suspenseDur = 1.8f, float revealTextDur = 0.6f, float sustainDur = 0.6f)
     {
         ReadyForSubmission = false;
@@ -177,17 +387,23 @@ public class LimboKeysScript : MonoBehaviour
         Selectable.transform.localScale = Vector3.zero;
         if (KeyCycleAnim != null)
             StopCoroutine(KeyCycleAnim);
+        var initKeyColours = new List<Color>();
         for (int i = 0; i < Keys.Length; i++)
-            Keys[i].color = Glows[i].color = new Color(Glows[i].color.r, Glows[i].color.g, Glows[i].color.b, 0);
-        Display.material.color = ColoursForRends[selected];
+            initKeyColours.Add(Keys[i].color);
         float timer = 0;
-        while (timer < colourFlashDur)
+        if (selected > -1)
         {
-            yield return null;
-            timer += Time.deltaTime;
-            Display.material.color = Color.Lerp(ColoursForRends[selected], Color.black, timer / colourFlashDur);
+            Display.material.color = ColoursForRends[selected];
+            for (int i = 0; i < Keys.Length; i++)
+                Keys[i].color = Glows[i].color = new Color(Glows[i].color.r, Glows[i].color.g, Glows[i].color.b, 0);
+            while (timer < colourFlashDur)
+            {
+                yield return null;
+                timer += Time.deltaTime;
+                Display.material.color = Color.Lerp(ColoursForRends[selected], Color.black, timer / colourFlashDur);
+            }
+            Display.material.color = Color.black;
         }
-        Display.material.color = Color.black;
         Eye.color = new Color(1, 1, 0, 0);
         Eye.gameObject.SetActive(true);
         timer = 0;
@@ -196,18 +412,32 @@ public class LimboKeysScript : MonoBehaviour
             yield return null;
             timer += Time.deltaTime;
             Eye.color = new Color(1, 1, 0, Mathf.Max(Mathf.Lerp(0, 1, timer / eyeFadeInDur) - Rnd.Range(flickerMin, flickerMax), 0));
+            if (selected == -1)
+                for (int i = 0; i < Keys.Length; i++)
+                    Keys[i].color = Color.Lerp(initKeyColours[i], initKeyColours[i] * new Color(1, 1, 1, 0), timer / eyeFadeInDur);
         }
+        for (int i = 0; i < Keys.Length; i++)
+            Keys[i].color = initKeyColours[i] * new Color(1, 1, 1, 0);
         Eye.color = new Color(1, 1, 0, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
-        timer = 0;
-        while (timer < suspenseDur)
+
+        if (!FocusMode)
         {
-            yield return null;
-            timer += Time.deltaTime;
-            Eye.color = new Color(1, 1, 0, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+            timer = 0;
+            while (timer < suspenseDur)
+            {
+                yield return null;
+                timer += Time.deltaTime;
+                Eye.color = new Color(1, 1, 0, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
+            }
         }
+        else
+            while (!ReadyToMoveOn)
+                yield return null;
         var targetColour = Color.red;
         if (state == 0)
             targetColour = Color.green;
+        if (state == 2)
+            targetColour = new Color(1, 1, 0, 1);
         SelectedText.sprite = PossibleTexts[state];
         SelectedText.color = new Color(1, 1, 0, 0);
         SelectedText.gameObject.SetActive(true);
@@ -232,6 +462,21 @@ public class LimboKeysScript : MonoBehaviour
             SelectedText.color = new Color(SelectedText.color.r, SelectedText.color.g, SelectedText.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
             Eye.color = new Color(Eye.color.r, Eye.color.g, Eye.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
         }
+        if (state > 0 && BossMode)
+        {
+            Debug.LogFormat("[Limbo Keys #{0}] You chose the {1} key (the {2} key), which was incorrect. Death is inescapable...", _moduleID, new[] { "red", "yellow", "green", "cyan", "blue", "purple", "pink", "white" }[selected], new[] { "North", "North-West", "West", "South-West", "South", "South-East", "East", "North-East" }[selected]);
+            while (true)
+            {
+                for (int i = 0; i < 10; i++)
+                    Module.HandleStrike();
+                timer = 0;
+                while (timer < 1f)
+                {
+                    yield return null;
+                    timer += Time.deltaTime;
+                }
+            }
+        }
         if (state == 0)
         {
             Module.HandlePass();
@@ -245,17 +490,25 @@ public class LimboKeysScript : MonoBehaviour
                 Eye.color = new Color(Eye.color.r, Eye.color.g, Eye.color.b, Mathf.Max(1 - Rnd.Range(flickerMin, flickerMax), 0));
             }
         }
-        else
+        else if (state == 1)
         {
             Module.HandleStrike();
             yield return "strike";
             Debug.LogFormat("[Limbo Keys #{0}] You chose the {1} key (the {2} key), which was incorrect. Strike!", _moduleID, new[] { "red", "yellow", "green", "cyan", "blue", "purple", "pink", "white" }[selected], new[] { "North", "North-West", "West", "South-West", "South", "South-East", "East", "North-East" }[selected]);
             CurrentSwap = 0;
-            StartCoroutine(HandleStrikeAnim(flickerMin, flickerMax));
+            StartCoroutine(HandleStrikeAnim(flickerMin, flickerMax, false));
+        }
+        else
+        {
+            Module.HandleStrike();
+            yield return "strike";
+            Debug.LogFormat("[Limbo Keys #{0}] Pick a key, coward! Don't let it win!", _moduleID);
+            CurrentSwap = 0;
+            StartCoroutine(HandleStrikeAnim(flickerMin, flickerMax, true));
         }
     }
 
-    private IEnumerator HandleStrikeAnim(float flickerMin, float flickerMax, float pauseDur = 1.5f, float fadeOutDur = 0.3f, float speenDur = 1.2f, float sustainDur = 0.06f, float retractDur = 0.3f)
+    private IEnumerator HandleStrikeAnim(float flickerMin, float flickerMax, bool noSelection, float pauseDur = 1.5f, float fadeOutDur = 0.3f, float speenDur = 1.2f, float sustainDur = 0.06f, float retractDur = 0.3f)
     {
         float timer = 0;
         while (timer < pauseDur)
@@ -310,6 +563,7 @@ public class LimboKeysScript : MonoBehaviour
             Keys[i].transform.localPosition = Vector3.up * Keys[i].transform.localPosition.y;
             Keys[i].color = Color.clear;
         }
+        ReadyToMoveOn = false;
         DecoyKey.gameObject.SetActive(true);
         Selectable.transform.localScale = new Vector3(0.75f, 0.001f, 0.75f);
         CannotPress = false;
@@ -324,7 +578,11 @@ public class LimboKeysScript : MonoBehaviour
         if (Sound != null)
             Sound.StopSound();
         if (!MuteMusic)
+        {
+            if (Sound != null)
+                Sound.StopSound();
             Sound = Audio.HandlePlaySoundAtTransformWithRef("music", transform, false);
+        }
         float timer = 0;
         while (timer < focusFadeInDur)
         {
@@ -606,14 +864,16 @@ public class LimboKeysScript : MonoBehaviour
             KeyCycleAnim = StartCoroutine(DoFlashes());
     }
 
-    private IEnumerator DoFlashes(float sustain = 0.60f, float glowAlpha = 1 / 2f)
+    private IEnumerator DoFlashes(float sustain = 0.5f, float glowAlpha = 1 / 2f)
     {
         CannotPress = false;
         ReadyForSubmission = true;
         Selectable.transform.localScale = new Vector3(0.75f, 0.001f, 0.75f);
         var order = Enumerable.Range(0, 8).ToList();
         var i = Selected = 0;
-        while (true)
+        if (FocusMode)
+            StartCoroutine(BlowWhistleWhenReady((sustain * 8) + 1.2f));
+        do
         {
             Keys[order[i]].color = new Color(Keys[order[i]].color.r, Keys[order[i]].color.g, Keys[order[i]].color.b, 1);
             Glows[order[i]].color = new Color(Glows[order[i]].color.r, Glows[order[i]].color.g, Glows[order[i]].color.b, glowAlpha);
@@ -622,15 +882,33 @@ public class LimboKeysScript : MonoBehaviour
             {
                 yield return null;
                 timer += Time.deltaTime;
-                Keys[order[i]].color = new Color(Keys[order[i]].color.r, Keys[order[i]].color.g, Keys[order[i]].color.b, Mathf.Lerp(1, 1/2f, timer / sustain));
+                Keys[order[i]].color = new Color(Keys[order[i]].color.r, Keys[order[i]].color.g, Keys[order[i]].color.b, Mathf.Lerp(1, 1 / 2f, timer / sustain));
                 Glows[order[i]].color = new Color(Glows[order[i]].color.r, Glows[order[i]].color.g, Glows[order[i]].color.b, Mathf.Lerp(glowAlpha, 0, timer / sustain));
             }
-            Keys[order[i]].color = new Color(Keys[order[i]].color.r, Keys[order[i]].color.g, Keys[order[i]].color.b, 1/2f);
+            Keys[order[i]].color = new Color(Keys[order[i]].color.r, Keys[order[i]].color.g, Keys[order[i]].color.b, 1 / 2f);
             Glows[order[i]].color = new Color(Glows[order[i]].color.r, Glows[order[i]].color.g, Glows[order[i]].color.b, 0);
             i = (i + 1) % Keys.Length;
             Selected = i;
         }
+        while (!FocusMode || i != 0);
+        CannotPress = true;
+        ReadyForSubmission = false;
+        Selectable.transform.localScale = Vector3.zero;
+        StartCoroutine(AfterSelection(2, -1));
     }
+
+    private IEnumerator BlowWhistleWhenReady(float duration)
+    {
+        float timer = 0;
+        while (timer < duration)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+        }
+        ReadyToMoveOn = true;
+    }
+
+    private bool TwitchPlaysActive = false;
 
 #pragma warning disable 414
     private string TwitchHelpMessage = "Use '!{0} go' to initialise the module. Use '!{0} [colour or cardinal direction]' to select a key. Colours are red, yellow, green, cyan, blue, purple, pink, white, and cardinal directions are North, North-West, West, South-West, South, South-East, East, North-East. These can be abbreviated as R, Y, G, C, B, P, I, W and No, NW, We, SW, So, SE, Ea, NE. If something caused the stream to lag, making the series of key swaps impossible to see, use '!{0} regen' to regenerate the keys, with no penalty (can only be used when the keys are cycling).";

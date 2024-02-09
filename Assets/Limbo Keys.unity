@@ -178,6 +178,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &382677645 stripped
+GameObject:
+  m_PrefabParentObject: {fileID: 1357071248244726, guid: 2c547254946922f40a64d3f40e66c23c,
+    type: 2}
+  m_PrefabInternal: {fileID: 1801146312}
+--- !u!114 &382677646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 382677645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96a2fc4ae3e690a498a0d85a2b5e0b99, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &679472562
 Prefab:
   m_ObjectHideFlags: 0
@@ -188,7 +204,7 @@ Prefab:
     - target: {fileID: 114848120511536268, guid: 8814ea52310d2614a9feda02ec355ae4,
         type: 2}
       propertyPath: AudioClips.Array.size
-      value: 1
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 439642, guid: 8814ea52310d2614a9feda02ec355ae4, type: 2}
       propertyPath: m_LocalPosition.x
@@ -227,6 +243,11 @@ Prefab:
       propertyPath: AudioClips.Array.data[0]
       value: 
       objectReference: {fileID: 8300000, guid: b90619ab24b6af746a0ce15c8b59a657, type: 3}
+    - target: {fileID: 114848120511536268, guid: 8814ea52310d2614a9feda02ec355ae4,
+        type: 2}
+      propertyPath: AudioClips.Array.data[1]
+      value: 
+      objectReference: {fileID: 8300000, guid: 60dedb4bd2b53ef46ac7c51502b81c93, type: 3}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 8814ea52310d2614a9feda02ec355ae4, type: 2}
   m_IsPrefabParent: 0
@@ -349,6 +370,15 @@ Prefab:
     - target: {fileID: 4437767805292466, guid: 2c547254946922f40a64d3f40e66c23c, type: 2}
       propertyPath: m_RootOrder
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 114098490773497106, guid: 2c547254946922f40a64d3f40e66c23c,
+        type: 2}
+      propertyPath: Boss
+      value: 
+      objectReference: {fileID: 382677646}
+    - target: {fileID: 4196772933837178, guid: 2c547254946922f40a64d3f40e66c23c, type: 2}
+      propertyPath: m_LocalScale.x
+      value: 0.0225
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 2c547254946922f40a64d3f40e66c23c, type: 2}
