@@ -53,6 +53,7 @@ GameObject:
   - component: {fileID: 65096120226147512}
   - component: {fileID: 23446654832712626}
   - component: {fileID: 114672133620603206}
+  - component: {fileID: 114037925975340722}
   m_Layer: 0
   m_Name: Positive Contact
   m_TagString: Untagged
@@ -86,6 +87,7 @@ GameObject:
   - component: {fileID: 33061586592666914}
   - component: {fileID: 23254324963996308}
   - component: {fileID: 114600843064845416}
+  - component: {fileID: 114177871955015836}
   m_Layer: 0
   m_Name: D Battery (1)
   m_TagString: Untagged
@@ -105,6 +107,7 @@ GameObject:
   - component: {fileID: 65941227392428360}
   - component: {fileID: 23013576721669166}
   - component: {fileID: 114167794949152202}
+  - component: {fileID: 114331950534932216}
   m_Layer: 0
   m_Name: Negative Contact
   m_TagString: Untagged
@@ -123,6 +126,7 @@ GameObject:
   - component: {fileID: 33149346576569552}
   - component: {fileID: 23690258210103258}
   - component: {fileID: 114700570886928332}
+  - component: {fileID: 114301639126762820}
   m_Layer: 0
   m_Name: Holder
   m_TagString: Untagged
@@ -415,6 +419,19 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &114037925975340722
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1428877502673600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1005838349, guid: 3483625df5b6a6d4b9017d55fe80722a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShaderNames:
+  - Legacy Shaders/Diffuse
 --- !u!114 &114167794949152202
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -424,6 +441,45 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: -1005838349, guid: 45b809be76fd7a3468b6f517bced6f28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShaderNames:
+  - Legacy Shaders/Diffuse
+--- !u!114 &114177871955015836
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1812225450851544}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1005838349, guid: 3483625df5b6a6d4b9017d55fe80722a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShaderNames:
+  - KT/Mobile/Diffuse
+--- !u!114 &114301639126762820
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1991624224127848}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1005838349, guid: 3483625df5b6a6d4b9017d55fe80722a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShaderNames:
+  - Legacy Shaders/Diffuse
+--- !u!114 &114331950534932216
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1913591823060118}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1005838349, guid: 3483625df5b6a6d4b9017d55fe80722a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:

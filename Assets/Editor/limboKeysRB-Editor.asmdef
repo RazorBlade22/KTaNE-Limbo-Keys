@@ -1,0 +1,10 @@
+{
+  "name": "limboKeysRB-Editor",
+  "references": [
+    "limboKeysRB"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": []
+}

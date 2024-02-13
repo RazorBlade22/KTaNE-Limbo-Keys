@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KModkit;
+using Wawa.DDL;
+using Wawa.Optionals;
+using System.Text.RegularExpressions;
 using Rnd = UnityEngine.Random;
-using NUnit.Framework.Internal.Commands;
 
 public class LimboKeysScript : MonoBehaviour
 {
@@ -57,12 +59,18 @@ public class LimboKeysScript : MonoBehaviour
 
         MuteMusic = _Settings.MuteMusic;
         FocusMode = _Settings.FocusMode;
-        BossMode = _Settings.BossMode || true;
+        BossMode = _Settings.BossMode;
 
         if (BossMode)
+        {
             FocusMode = true;
+            Debug.LogFormat("[Limbo Keys #{0}] Focus mode has been enabled, as Boss mode is also enabled.", _moduleID);
+        }
         if (FocusMode || BossMode)
+        {
             MuteMusic = false;
+            Debug.LogFormat("[Limbo Keys #{0}] Music has been enabled, as either Focus mode or Boss mode have been enabled.", _moduleID);
+        }
         if (TwitchPlaysActive)  //Disable FocusMode on TP, as it cannot be done
         {
             FocusMode = false;
@@ -72,72 +80,61 @@ public class LimboKeysScript : MonoBehaviour
 
     void SortOutMissionDescription()
     {
-        try
+        string description = Application.isEditor ? "[Limbo Keys] music off\n[Limbo Keys] focus off\n[Limbo Keys] boss on" : Missions.Description.UnwrapOr("");
+        var matches = Regex.Matches(description, @"^(?:// )?\[Limbo ?Keys\] (.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (matches.Count == 0)
         {
-            string description = Application.isEditor ? "" : Missions.Description.UnwrapOr("");
-            var matches = Regex.Matches(description, @"^(?:// )?\[Revision ?Helper\] (.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-            for (int i = 0; i < matches.Count; i++)
+            Debug.LogFormat("[Limbo Keys #{0}] Either nothing has been specified by the mission description, or this module is being played in Free Play.", _moduleID);
+            GetSettings();
+            return;
+        }
+        for (int i = 0; i < matches.Count; i++)
+        {
+            if (matches[i].Groups[1].Value.ToLowerInvariant() == "music on")
             {
-                if (matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4) == "3an ")
-                {
-                    try
-                    {
-                        MissionOverThreeIncrement = float.Parse(matches[i].Groups[1].Value.Substring(4, matches[i].Groups[1].Value.Length - 4));
-                        MissionInfo[1] = true;
-                    }
-                    catch
-                    {
-                        Debug.LogFormat("[Revision Helper #{0}] Could not assign a new value for the over 3 answer increment: ignoring line.", _moduleID);
-                    }
-                }
-                else if (matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4) == "act ")
-                {
-                    try
-                    {
-                        MissionCountdown = float.Parse(matches[i].Groups[1].Value.Substring(4, matches[i].Groups[1].Value.Length - 4));
-                        MissionInfo[2] = true;
-                    }
-                    catch
-                    {
-                        Debug.LogFormat("[Revision Helper #{0}] Could not assign a new value for the base countdown time: ignoring line.", _moduleID);
-                    }
-                }
-                else if (matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4) == "bon ")
-                {
-                    try
-                    {
-                        MissionBonusTime = float.Parse(matches[i].Groups[1].Value.Substring(4, matches[i].Groups[1].Value.Length - 4));
-                        MissionInfo[3] = true;
-                    }
-                    catch
-                    {
-                        Debug.LogFormat("[Revision Helper #{0}] Could not assign a new value for the Twitch Plays countdown bonus: ignoring line.", _moduleID);
-                    }
-                }
-                else if (matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4) == "lon ")
-                {
-                    try
-                    {
-                        MissionLongIncrement = float.Parse(matches[i].Groups[1].Value.Substring(4, matches[i].Groups[1].Value.Length - 4));
-                        MissionInfo[4] = true;
-                    }
-                    catch
-                    {
-                        Debug.LogFormat("[Revision Helper #{0}] Could not assign a new value for the long question increment: ignoring line.", _moduleID);
-                    }
-                }
-                if (!new[] { "3an ", "act ", "bon ", "lon " }.Contains(matches[i].Groups[1].Value.ToLowerInvariant().Substring(0, 4)))
-                {
-                    var temp = matches[i].Groups[1].Value.Split(new string[] { "   " }, StringSplitOptions.None).Select((x, ix) => x.Replace("\r", "").Split(new string[] { "  " }, StringSplitOptions.None).ToList());
-                    foreach (var item in temp)
-                        MissionQuestions.Add(item);
-                    MissionInfo[0] = true;
-                }
+                MuteMusic = false;
+                Debug.LogFormat("[Limbo Keys #{0}] Music has been enabled, as specified by the mission description.", _moduleID);
+            }
+            if (matches[i].Groups[1].Value.ToLowerInvariant() == "music off")
+            {
+                MuteMusic = true;
+                Debug.LogFormat("[Limbo Keys #{0}] Music has been disabled, as specified by the mission description.", _moduleID);
+            }
+            if (matches[i].Groups[1].Value.ToLowerInvariant() == "focus on")
+            {
+                FocusMode = true;
+                Debug.LogFormat("[Limbo Keys #{0}] Focus mode has been enabled, as specified by the mission description.", _moduleID);
+            }
+            if (matches[i].Groups[1].Value.ToLowerInvariant() == "focus off")
+            {
+                FocusMode = false;
+                Debug.LogFormat("[Limbo Keys #{0}] Focus mode has been disabled, as specified by the mission description.", _moduleID);
+            }
+            if (matches[i].Groups[1].Value.ToLowerInvariant() == "boss on")
+            {
+                BossMode = true;
+                Debug.LogFormat("[Limbo Keys #{0}] Boss mode has been enabled, as specified by the mission description.", _moduleID);
+            }
+            if (matches[i].Groups[1].Value.ToLowerInvariant() == "boss off")
+            {
+                BossMode = false;
+                Debug.LogFormat("[Limbo Keys #{0}] Boss mode has been disabled, as specified by the mission description.", _moduleID);
             }
         }
-        catch (Exception e)
+        if (BossMode)
         {
-            Error(e);
+            FocusMode = true;
+            Debug.LogFormat("[Limbo Keys #{0}] Focus mode has been enabled, as Boss mode is also enabled.", _moduleID);
+        }
+        if (FocusMode || BossMode)
+        {
+            MuteMusic = false;
+            Debug.LogFormat("[Limbo Keys #{0}] Music has been enabled, as either Focus mode or Boss mode have been enabled.", _moduleID);
+        }
+        if (TwitchPlaysActive)  //Disable FocusMode on TP, as it cannot be done
+        {
+            FocusMode = false;
+            Debug.LogFormat("[Limbo Keys #{0}] Focus mode has been disabled, as Twitch Plays is active.", _moduleID);
         }
     }
 
@@ -279,7 +276,7 @@ public class LimboKeysScript : MonoBehaviour
     void Start()
     {
         Debug.LogFormat("[Limbo Keys #{0}] Welcome to Limbo... Let the games begin.", _moduleID);
-        GetSettings();
+        SortOutMissionDescription();
         if (FocusMode)
             ModuleBG.material.color = new Color(1 / 4f, 0, 0);
 
