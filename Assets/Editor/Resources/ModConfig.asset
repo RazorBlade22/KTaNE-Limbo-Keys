@@ -28,4 +28,4 @@ MonoBehaviour:
     if FOCUS mode is active)\r\n(Shows an eye when it's inactive)"
   version: 1.0
   outputFolder: build
-  previewImage: {fileID: 0}
+  previewImage: {fileID: 2800000, guid: 8825755b1619fe144afd15f4132b044b, type: 3}
