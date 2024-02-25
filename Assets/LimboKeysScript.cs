@@ -461,7 +461,14 @@ public class LimboKeysScript : MonoBehaviour
         }
         if (state > 0 && BossMode)
         {
-            Debug.LogFormat("[Limbo Keys #{0}] You chose the {1} key (the {2} key), which was incorrect. Death is inescapable...", _moduleID, new[] { "red", "yellow", "green", "cyan", "blue", "purple", "pink", "white" }[selected], new[] { "North", "North-West", "West", "South-West", "South", "South-East", "East", "North-East" }[selected]);
+            if (state == 1)
+            {
+                Debug.LogFormat("[Limbo Keys #{0}] You chose the {1} key (the {2} key), which was incorrect. Death is inescapable...", _moduleID, new[] { "red", "yellow", "green", "cyan", "blue", "purple", "pink", "white" }[selected], new[] { "North", "North-West", "West", "South-West", "South", "South-East", "East", "North-East" }[selected]);
+            }
+            else
+            {
+                Debug.LogFormat("[Limbo Keys #{0}] Pick a key, coward! Don't let it win!", _moduleID);
+            }
             while (true)
             {
                 for (int i = 0; i < 10; i++)
