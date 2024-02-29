@@ -876,7 +876,7 @@ public class LimboKeysScript : MonoBehaviour
         var order = Enumerable.Range(0, 8).ToList();
         var i = Selected = 0;
         if (FocusMode)
-            StartCoroutine(BlowWhistleWhenReady((sustain * 8) + 1.2f));
+            StartCoroutine(BlowWhistleWhenReady((sustain * 8) + 3f));
         do
         {
             Keys[order[i]].color = new Color(Keys[order[i]].color.r, Keys[order[i]].color.g, Keys[order[i]].color.b, 1);
