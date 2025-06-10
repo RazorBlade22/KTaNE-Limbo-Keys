@@ -131,11 +131,6 @@ public class LimboKeysScript : MonoBehaviour
             MuteMusic = false;
             Debug.LogFormat("[Limbo Keys #{0}] Music has been enabled, as either Focus mode or Boss mode have been enabled.", _moduleID);
         }
-        if (TwitchPlaysActive)  //Disable FocusMode on TP, as it cannot be done
-        {
-            FocusMode = false;
-            Debug.LogFormat("[Limbo Keys #{0}] Focus mode has been disabled, as Twitch Plays is active.", _moduleID);
-        }
     }
 
     private KMAudio.KMAudioRef Sound;
@@ -295,10 +290,18 @@ public class LimboKeysScript : MonoBehaviour
             Module.OnActivate += delegate { StartCoroutine(WaitUntilEnoughSolves()); };
         }
 
-        if (BossMode)
-            Debug.LogFormat("[Limbo Keys #{0}] Boss mode is active.", _moduleID);
-        if (FocusMode)
-            Debug.LogFormat("[Limbo Keys #{0}] Focus mode is active.", _moduleID);
+        Module.OnActivate += delegate
+        {
+            if (BossMode)
+                Debug.LogFormat("[Limbo Keys #{0}] Boss mode is active.", _moduleID);
+            if (FocusMode && TwitchPlaysActive)  //Disable FocusMode on TP, as it cannot be done
+            {
+                FocusMode = false;
+                Debug.LogFormat("[Limbo Keys #{0}] Focus mode has been disabled, as Twitch Plays is active.", _moduleID);
+            }
+            else if (FocusMode)
+                Debug.LogFormat("[Limbo Keys #{0}] Focus mode is active.", _moduleID);
+        };
     }
 
     // Update is called once per frame
